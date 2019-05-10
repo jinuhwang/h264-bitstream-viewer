@@ -26,8 +26,8 @@
           @perPageChange="handlePerPageChange"
         />
       </div>
-      <div :class="$style.details">
-        <UiTabs v-if="hasDetails">
+      <div :class="$style.payload">
+        <UiTabs v-if="hasPayload">
           <UiTab title="NAL">
             <TabUnit
               :number="this.selectedNumber"
@@ -35,8 +35,10 @@
               :unitHeader="selectedUnitHeader"
             />
           </UiTab>
-          <UiTab title="Details">
-            <TabDetails :details="details" />
+          <UiTab title="Payload">
+            <PayloadPPS v-if="isPayloadPPS" :payload="payload" />
+            <PayloadSEI v-if="isPayloadSEI" :payload="payload" />
+            <PayloadSerialized v-if="isPayloadSerialized" :payload="payload" />
           </UiTab>
         </UiTabs>
       </div>
@@ -48,7 +50,9 @@
 import { UiFileupload, UiProgressCircular, UiTabs, UiTab } from 'keen-ui';
 
 import Pagination from './Pagination';
-import TabDetails from './TabDetails';
+import PayloadPPS from './PayloadPPS';
+import PayloadSEI from './PayloadSEI';
+import PayloadSerialized from './PayloadSerialized';
 import TabUnit from './TabUnit';
 import UnitHeaderList from './UnitHeaderList';
 
@@ -56,6 +60,8 @@ import FileChunkReader from '../lib/FileChunkReader';
 import FileReadStream from '../lib/FileReadStream';
 import H264BitstreamParser from '../lib/H264BitstreamParser';
 import H264BitstreamOffsetStream from '../lib/H264BitstreamOffsetStream';
+
+import { NALU_TYPES } from '../constants';
 
 export default {
   components: {
@@ -65,7 +71,9 @@ export default {
     UiTab,
 
     Pagination,
-    TabDetails,
+    PayloadPPS,
+    PayloadSEI,
+    PayloadSerialized,
     TabUnit,
     UnitHeaderList,
   },
@@ -77,8 +85,8 @@ export default {
       totalRanges: 0,
       selectedIndex: -1,
       selectedUnitHeader: null,
-      details: null,
       currentPage: 1,
+      payload: null,
       perPage: 30,
       unitHeaders: [],
     };
@@ -102,8 +110,8 @@ export default {
 
       return progress;
     },
-    hasDetails() {
-      return this.details !== null;
+    hasPayload() {
+      return this.payload !== null;
     },
     indexOffset() {
       return (this.currentPage - 1) * this.perPage;
@@ -131,6 +139,24 @@ export default {
 
       return selectedRange;
     },
+    isPayloadPPS() {
+      if (this.selectedUnitHeader === null) {
+        return false;
+      }
+      return this.selectedUnitHeader.type === NALU_TYPES.PPS;
+    },
+    isPayloadSEI() {
+      if (this.selectedUnitHeader === null) {
+        return false;
+      }
+      return this.selectedUnitHeader.type === NALU_TYPES.SEI;
+    },
+    isPayloadSerialized() {
+      if (this.selectedUnitHeader === null) {
+        return false;
+      }
+      return typeof this.payload === 'string';
+    },
   },
 
   methods: {
@@ -144,7 +170,7 @@ export default {
       this.totalRanges = 0;
       this.selectedIndex = -1;
       this.selectedUnitHeader = null;
-      this.details = null;
+      this.payload = null;
       this.currentPage = 1;
       this.unitHeaders = [];
     },
@@ -202,14 +228,12 @@ export default {
     },
 
     async handleUnitHeaderSelect(unitHeader, index) {
-      this.selectedUnitHeader = unitHeader;
+      // this.payload = null;
 
       const range = this.$options.ranges[index];
       if (range === undefined) {
         return;
       }
-
-      this.selectedIndex = index;
 
       const chunkReader = new FileChunkReader(this.$options.file);
       const buffer = await chunkReader.readAsArrayBuffer(
@@ -217,13 +241,25 @@ export default {
         range.end,
       );
       const data = new Uint8Array(buffer);
-
       const dataNoStartCode = data.slice(3);
 
       const reader = new window.Module.Reader();
-      const text = this.read(reader, dataNoStartCode);
 
-      this.details = text;
+      let payload = null;
+
+      if (unitHeader.type === NALU_TYPES.SEI) {
+        payload = this.readSEI(reader, dataNoStartCode);
+      } else if (unitHeader.type === NALU_TYPES.PPS) {
+        payload = this.readPPS(reader, dataNoStartCode);
+      } else {
+        payload = this.readToString(reader, dataNoStartCode);
+      }
+
+      console.log({ payload });
+
+      this.payload = payload;
+      this.selectedIndex = index;
+      this.selectedUnitHeader = unitHeader;
     },
 
     async loadPage() {
@@ -253,7 +289,7 @@ export default {
       this.unitHeaders = unitHeaders;
     },
 
-    read(reader, data) {
+    readToString(reader, data) {
       const unitData32 = new Int32Array(data);
 
       const numBytes = unitData32.length * unitData32.BYTES_PER_ELEMENT;
@@ -262,7 +298,39 @@ export default {
       const heapBytes = new Uint8Array(Module.HEAPU8.buffer, ptr, numBytes);
       heapBytes.set(new Uint8Array(unitData32.buffer));
 
-      const ret = reader.read(ptr, unitData32.length);
+      const str = reader.readToString(ptr, unitData32.length);
+
+      Module._free(ptr);
+
+      return str;
+    },
+
+    readSEI(reader, data) {
+      const unitData32 = new Int32Array(data);
+
+      const numBytes = unitData32.length * unitData32.BYTES_PER_ELEMENT;
+      const ptr = Module._malloc(numBytes);
+
+      const heapBytes = new Uint8Array(Module.HEAPU8.buffer, ptr, numBytes);
+      heapBytes.set(new Uint8Array(unitData32.buffer));
+
+      const ret = reader.readSEI(ptr, unitData32.length);
+
+      Module._free(ptr);
+
+      return ret;
+    },
+
+    readPPS(reader, data) {
+      const unitData32 = new Int32Array(data);
+
+      const numBytes = unitData32.length * unitData32.BYTES_PER_ELEMENT;
+      const ptr = Module._malloc(numBytes);
+
+      const heapBytes = new Uint8Array(Module.HEAPU8.buffer, ptr, numBytes);
+      heapBytes.set(new Uint8Array(unitData32.buffer));
+
+      const ret = reader.readPPS(ptr, unitData32.length);
 
       Module._free(ptr);
 
@@ -307,7 +375,7 @@ export default {
   padding: 10px 0;
 }
 
-.details {
+.payload {
   flex: 1;
   min-height: 0;
   overflow: auto;

@@ -10,5 +10,6 @@
   padding: 5px;
   position: sticky;
   top: 0;
+  vertical-align: top;
 }
 </style>

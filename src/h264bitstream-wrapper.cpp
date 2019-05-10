@@ -13,12 +13,9 @@ extern "C" {
 
 // The following functions:
 // - print_sps
-// - print_pps
 // - print_slice_header
 // - print_aud
-// - print_seis
 // - print_nal
-// - print_bytes
 //
 // Were copied and modified from the file:
 //
@@ -55,18 +52,6 @@ extern "C" {
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-void print_bytes(stringstream &ts, uint8_t* buf, int len) {
-  for (int i = 0; i < len; i++) {
-    // ts << string("%1 ").arg(buf[i] , 0, 16, QLatin1Char('0'));
-    ts << hex << buf[i] << " ";
-
-    if ((i+1) % 16 == 0) {
-      ts<< "\n";
-    }
-  }
-  ts << "\n";
-}
 
 void print_sps(stringstream &ts, sps_t* sps)
 {
@@ -163,42 +148,6 @@ void print_sps(stringstream &ts, sps_t* sps)
     ts << " cpb_removal_delay_length_minus1 :" << sps->hrd_nal.cpb_removal_delay_length_minus1 <<"\n";
     ts << " dpb_output_delay_length_minus1 :" << sps->hrd_nal.dpb_output_delay_length_minus1 <<"\n";
     ts << " time_offset_length :" << sps->hrd_nal.time_offset_length <<"\n";
-}
-
-void print_pps(stringstream &ts, pps_t* pps)
-{
-    ts << "======= PPS =======\n";
-    ts << " pic_parameter_set_id :" << pps->pic_parameter_set_id <<"\n";
-    ts << " seq_parameter_set_id :" << pps->seq_parameter_set_id <<"\n";
-    ts << " entropy_coding_mode_flag :" << pps->entropy_coding_mode_flag <<"\n";
-    ts << " pic_order_present_flag :" << pps->pic_order_present_flag <<"\n";
-    ts << " num_slice_groups_minus1 :" << pps->num_slice_groups_minus1 <<"\n";
-    ts << " slice_group_map_type :" << pps->slice_group_map_type <<"\n";
-    //  int run_length_minus1[8]; // up to num_slice_groups_minus1, which is <= 7 in Baseline and Extended, 0 otheriwse
-    //  int top_left[8];
-    //  int bottom_right[8];
-    //  int slice_group_change_direction_flag;
-    //  int slice_group_change_rate_minus1;
-    //  int pic_size_in_map_units_minus1;
-    //  int slice_group_id[256]; // FIXME what size?
-    ts << " num_ref_idx_l0_active_minus1 :" << pps->num_ref_idx_l0_active_minus1 <<"\n";
-    ts << " num_ref_idx_l1_active_minus1 :" << pps->num_ref_idx_l1_active_minus1 <<"\n";
-    ts << " weighted_pred_flag :" << pps->weighted_pred_flag <<"\n";
-    ts << " weighted_bipred_idc :" << pps->weighted_bipred_idc <<"\n";
-    ts << " pic_init_qp_minus26 :" << pps->pic_init_qp_minus26 <<"\n";
-    ts << " pic_init_qs_minus26 :" << pps->pic_init_qs_minus26 <<"\n";
-    ts << " chroma_qp_index_offset :" << pps->chroma_qp_index_offset <<"\n";
-    ts << " deblocking_filter_control_present_flag :" << pps->deblocking_filter_control_present_flag <<"\n";
-    ts << " constrained_intra_pred_flag :" << pps->constrained_intra_pred_flag <<"\n";
-    ts << " redundant_pic_cnt_present_flag :" << pps->redundant_pic_cnt_present_flag <<"\n";
-    ts << " transform_8x8_mode_flag :" << pps->transform_8x8_mode_flag <<"\n";
-    ts << " pic_scaling_matrix_present_flag :" << pps->pic_scaling_matrix_present_flag <<"\n";
-    //  int pic_scaling_list_present_flag[8];
-    //  void* ScalingList4x4[6];
-    //  int UseDefaultScalingMatrix4x4Flag[6];
-    //  void* ScalingList8x8[2];
-    //  int UseDefaultScalingMatrix8x8Flag[2];
-    ts << " second_chroma_qp_index_offset :" << pps->second_chroma_qp_index_offset <<"\n";
 }
 
 void print_slice_header(stringstream &ts, slice_header_t* sh)
@@ -298,65 +247,58 @@ void print_aud(stringstream &ts, aud_t* aud)
     ts << " primary_pic_type :" << aud->primary_pic_type << primary_pic_type_name <<"\n";
 }
 
-void print_seis(stringstream &ts, h264_stream_t* h) {
-  sei_t** seis = h->seis;
-  int num_seis = h->num_seis;
-
-  cout << "num_seis = " << num_seis << endl;
-
-  ts << "======= SEI =======\n";
-  const char* sei_type_name;
-  int i;
-  for (i = 0; i < num_seis; i++) {
-    sei_t* s = seis[i];
-    switch(s->payloadType) {
-      case SEI_TYPE_BUFFERING_PERIOD :          sei_type_name = "Buffering period"; break;
-      case SEI_TYPE_PIC_TIMING :                sei_type_name = "Pic timing"; break;
-      case SEI_TYPE_PAN_SCAN_RECT :             sei_type_name = "Pan scan rect"; break;
-      case SEI_TYPE_FILLER_PAYLOAD :            sei_type_name = "Filler payload"; break;
-      case SEI_TYPE_USER_DATA_REGISTERED_ITU_T_T35 : sei_type_name = "User data registered ITU-T T35"; break;
-      case SEI_TYPE_USER_DATA_UNREGISTERED :    sei_type_name = "User data unregistered"; break;
-      case SEI_TYPE_RECOVERY_POINT :            sei_type_name = "Recovery point"; break;
-      case SEI_TYPE_DEC_REF_PIC_MARKING_REPETITION : sei_type_name = "Dec ref pic marking repetition"; break;
-      case SEI_TYPE_SPARE_PIC :                 sei_type_name = "Spare pic"; break;
-      case SEI_TYPE_SCENE_INFO :                sei_type_name = "Scene info"; break;
-      case SEI_TYPE_SUB_SEQ_INFO :              sei_type_name = "Sub seq info"; break;
-      case SEI_TYPE_SUB_SEQ_LAYER_CHARACTERISTICS : sei_type_name = "Sub seq layer characteristics"; break;
-      case SEI_TYPE_SUB_SEQ_CHARACTERISTICS :   sei_type_name = "Sub seq characteristics"; break;
-      case SEI_TYPE_FULL_FRAME_FREEZE :         sei_type_name = "Full frame freeze"; break;
-      case SEI_TYPE_FULL_FRAME_FREEZE_RELEASE : sei_type_name = "Full frame freeze release"; break;
-      case SEI_TYPE_FULL_FRAME_SNAPSHOT :       sei_type_name = "Full frame snapshot"; break;
-      case SEI_TYPE_PROGRESSIVE_REFINEMENT_SEGMENT_START : sei_type_name = "Progressive refinement segment start"; break;
-      case SEI_TYPE_PROGRESSIVE_REFINEMENT_SEGMENT_END : sei_type_name = "Progressive refinement segment end"; break;
-      case SEI_TYPE_MOTION_CONSTRAINED_SLICE_GROUP_SET : sei_type_name = "Motion constrained slice group set"; break;
-      case SEI_TYPE_FILM_GRAIN_CHARACTERISTICS : sei_type_name = "Film grain characteristics"; break;
-      case SEI_TYPE_DEBLOCKING_FILTER_DISPLAY_PREFERENCE : sei_type_name = "Deblocking filter display preference"; break;
-      case SEI_TYPE_STEREO_VIDEO_INFO :         sei_type_name = "Stereo video info"; break;
-      default: sei_type_name = "Unknown"; break;
-    }
-    ts << "=== " << sei_type_name<<"===\n";
-    ts << " payloadType :" << s->payloadType <<"\n";
-    ts << " payloadSize :" << s->payloadSize <<"\n";
-
-    ts << " payload : \n";
-    print_bytes(ts, s->data, s->payloadSize);
-  }
-}
-
 void print_nal(stringstream &ts, h264_stream_t* h, nal_t* nal)
 {
     if( nal->nal_unit_type == NAL_UNIT_TYPE_CODED_SLICE_NON_IDR) { print_slice_header(ts, h->sh); }
     else if( nal->nal_unit_type == NAL_UNIT_TYPE_CODED_SLICE_IDR) { print_slice_header(ts, h->sh); }
     else if( nal->nal_unit_type == NAL_UNIT_TYPE_SPS) { print_sps(ts, h->sps); }
-    else if( nal->nal_unit_type == NAL_UNIT_TYPE_PPS) { print_pps(ts, h->pps); }
     else if( nal->nal_unit_type == NAL_UNIT_TYPE_AUD) { print_aud(ts, h->aud); }
-    else if( nal->nal_unit_type == NAL_UNIT_TYPE_SEI) { print_seis(ts, h ); }
 }
+
+struct PayloadSEIItem {
+  int payloadType;
+  int payloadSize;
+  std::vector<uint8_t> data;
+};
+
+struct PayloadSEI {
+  int num_seis;
+  std::vector<PayloadSEIItem> seis;
+};
+
+struct PayloadPPS {
+  int pic_parameter_set_id;
+  int seq_parameter_set_id;
+  int entropy_coding_mode_flag;
+  int pic_order_present_flag;
+  int num_slice_groups_minus1;
+  int slice_group_map_type;
+  std::vector<int> run_length_minus1;
+  std::vector<int> top_left;
+  std::vector<int> bottom_right;
+  int slice_group_change_direction_flag;
+  int slice_group_change_rate_minus1;
+  int pic_size_in_map_units_minus1;
+  std::vector<int> slice_group_id;
+  int num_ref_idx_l0_active_minus1;
+  int num_ref_idx_l1_active_minus1;
+  int weighted_pred_flag;
+  int weighted_bipred_idc;
+  int pic_init_qp_minus26;
+  int pic_init_qs_minus26;
+  int chroma_qp_index_offset;
+  int deblocking_filter_control_present_flag;
+  int constrained_intra_pred_flag;
+  int redundant_pic_cnt_present_flag;
+  int transform_8x8_mode_flag;
+  int pic_scaling_matrix_present_flag;
+  int second_chroma_qp_index_offset;
+};
 
 struct Reader {
   Reader() {}
 
-  string read(uintptr_t input, int size) {
+  string readToString(uintptr_t input, int size) {
     const int32_t* data = reinterpret_cast<int32_t*>(input);
 
     uint8_t* buf = new uint8_t[size];
@@ -383,14 +325,155 @@ struct Reader {
 
     return ss.str();
   }
-};
 
+  PayloadSEI readSEI(uintptr_t input, int size) {
+    const int32_t* data = reinterpret_cast<int32_t*>(input);
+
+    uint8_t* buf = new uint8_t[size];
+
+    for (int i = 0; i < size; i += 1) {
+      buf[i] = (uint8_t) (data[i] & 0xff);
+    }
+
+    h264_stream_t* h = h264_new();
+
+    int ret = read_nal_unit(h, buf, size);
+
+    PayloadSEI payload;
+
+    sei_t** seis = h->seis;
+    int num_seis = h->num_seis;
+
+    payload.num_seis = num_seis;
+
+    for (int i = 0; i < num_seis; i++) {
+      sei_t* sei = seis[i];
+
+      PayloadSEIItem seiItem;
+      seiItem.payloadType = sei->payloadType;
+      seiItem.payloadSize = sei->payloadSize;
+
+      seiItem.data.resize(sei->payloadSize);
+
+      // seiItem.data.assign(*sei->data, sei->payloadSize);
+      for (int i = 0; i < sei->payloadSize; i += 1) {
+        seiItem.data.at(i) = sei->data[i];
+      }
+
+      payload.seis.push_back(seiItem);
+    }
+
+    h264_free(h);
+
+    delete [] buf;
+
+    return payload;
+  }
+
+  PayloadPPS readPPS(uintptr_t input, int size) {
+    const int32_t* data = reinterpret_cast<int32_t*>(input);
+
+    uint8_t* buf = new uint8_t[size];
+
+    for (int i = 0; i < size; i += 1) {
+      buf[i] = (uint8_t) (data[i] & 0xff);
+    }
+
+    h264_stream_t* h = h264_new();
+
+    int ret = read_nal_unit(h, buf, size);
+
+    PayloadPPS payload;
+
+    pps_t* pps = h->pps;
+
+    payload.pic_parameter_set_id = pps->pic_parameter_set_id;
+    payload.seq_parameter_set_id = pps->seq_parameter_set_id;
+    payload.entropy_coding_mode_flag = pps->entropy_coding_mode_flag;
+    payload.pic_order_present_flag = pps->pic_order_present_flag;
+    payload.num_slice_groups_minus1 = pps->num_slice_groups_minus1;
+    payload.slice_group_map_type = pps->slice_group_map_type;
+    payload.run_length_minus1.assign(*pps->run_length_minus1, 8);
+    payload.top_left.assign(*pps->top_left, 8);
+    payload.bottom_right.assign(*pps->bottom_right, 8);
+    payload.slice_group_change_direction_flag = pps->slice_group_change_direction_flag;
+    payload.slice_group_change_rate_minus1 = pps->slice_group_change_rate_minus1;
+    payload.pic_size_in_map_units_minus1 = pps->pic_size_in_map_units_minus1;
+    payload.slice_group_id.assign(*pps->slice_group_id, 8);
+    payload.num_ref_idx_l0_active_minus1 = pps->num_ref_idx_l0_active_minus1;
+    payload.num_ref_idx_l1_active_minus1 = pps->num_ref_idx_l1_active_minus1;
+    payload.weighted_pred_flag = pps->weighted_pred_flag;
+    payload.weighted_bipred_idc = pps->weighted_bipred_idc;
+    payload.pic_init_qp_minus26 = pps->pic_init_qp_minus26;
+    payload.pic_init_qs_minus26 = pps->pic_init_qs_minus26;
+    payload.chroma_qp_index_offset = pps->chroma_qp_index_offset;
+    payload.deblocking_filter_control_present_flag = pps->deblocking_filter_control_present_flag;
+    payload.constrained_intra_pred_flag = pps->constrained_intra_pred_flag;
+    payload.redundant_pic_cnt_present_flag = pps->redundant_pic_cnt_present_flag;
+    payload.transform_8x8_mode_flag = pps->transform_8x8_mode_flag;
+    payload.pic_scaling_matrix_present_flag = pps->pic_scaling_matrix_present_flag;
+    payload.second_chroma_qp_index_offset = pps->second_chroma_qp_index_offset;
+
+    h264_free(h);
+
+    delete [] buf;
+
+    return payload;
+  }
+};
 
 EMSCRIPTEN_BINDINGS(H264Bitstream) {
 
+  emscripten::register_vector<int>("vector<int>");
+  emscripten::register_vector<uint8_t>("vector<uint8_t>");
+  emscripten::register_vector<PayloadSEIItem>("vector<PayloadSEIItem>");
+
   emscripten::class_<Reader>("Reader")
     .constructor<>()
-    .function("read", &Reader::read)
+    .function("readToString", &Reader::readToString)
+    .function("readPPS", &Reader::readPPS)
+    .function("readSEI", &Reader::readSEI)
+    ;
+
+  emscripten::value_object<PayloadSEI>("PayloadSEI")
+    .field("num_seis", &PayloadSEI::num_seis)
+    .field("seis", &PayloadSEI::seis)
+    ;
+
+  emscripten::value_object<PayloadSEIItem>("PayloadSEIItem")
+    .field("payloadType", &PayloadSEIItem::payloadType)
+    .field("payloadSize", &PayloadSEIItem::payloadSize)
+    .field("data", &PayloadSEIItem::data)
+    ;
+
+
+  emscripten::value_object<PayloadPPS>("PayloadPPS")
+    .field("pic_parameter_set_id", &PayloadPPS::pic_parameter_set_id)
+    .field("seq_parameter_set_id", &PayloadPPS::seq_parameter_set_id)
+    .field("entropy_coding_mode_flag", &PayloadPPS::entropy_coding_mode_flag)
+    .field("pic_order_present_flag", &PayloadPPS::pic_order_present_flag)
+    .field("num_slice_groups_minus1", &PayloadPPS::num_slice_groups_minus1)
+    .field("slice_group_map_type", &PayloadPPS::slice_group_map_type)
+    .field("run_length_minus1", &PayloadPPS::run_length_minus1)
+    .field("top_left", &PayloadPPS::top_left)
+    .field("bottom_right", &PayloadPPS::bottom_right)
+    .field("slice_group_change_direction_flag", &PayloadPPS::slice_group_change_direction_flag)
+    .field("slice_group_change_rate_minus1", &PayloadPPS::slice_group_change_rate_minus1)
+    .field("pic_size_in_map_units_minus1", &PayloadPPS::pic_size_in_map_units_minus1)
+    .field("slice_group_id", &PayloadPPS::slice_group_id)
+    .field("num_ref_idx_l0_active_minus1", &PayloadPPS::num_ref_idx_l0_active_minus1)
+    .field("num_ref_idx_l1_active_minus1", &PayloadPPS::num_ref_idx_l1_active_minus1)
+    .field("weighted_pred_flag", &PayloadPPS::weighted_pred_flag)
+    .field("weighted_bipred_idc", &PayloadPPS::weighted_bipred_idc)
+    .field("pic_init_qp_minus26", &PayloadPPS::pic_init_qp_minus26)
+    .field("pic_init_qs_minus26", &PayloadPPS::pic_init_qs_minus26)
+    .field("chroma_qp_index_offset", &PayloadPPS::chroma_qp_index_offset)
+    .field("deblocking_filter_control_present_flag", &PayloadPPS::deblocking_filter_control_present_flag)
+    .field("constrained_intra_pred_flag", &PayloadPPS::constrained_intra_pred_flag)
+    .field("redundant_pic_cnt_present_flag", &PayloadPPS::redundant_pic_cnt_present_flag)
+    .field("transform_8x8_mode_flag", &PayloadPPS::transform_8x8_mode_flag)
+    .field("pic_scaling_matrix_present_flag", &PayloadPPS::pic_scaling_matrix_present_flag)
+    .field("second_chroma_qp_index_offset", &PayloadPPS::second_chroma_qp_index_offset)
     ;
 
 }
