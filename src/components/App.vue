@@ -38,6 +38,7 @@
           <UiTab title="Payload">
             <PayloadPPS v-if="isPayloadPPS" :payload="payload" />
             <PayloadSEI v-if="isPayloadSEI" :payload="payload" />
+            <PayloadSPS v-if="isPayloadSPS" :payload="payload" />
             <PayloadSerialized v-if="isPayloadSerialized" :payload="payload" />
           </UiTab>
         </UiTabs>
@@ -52,6 +53,7 @@ import { UiFileupload, UiProgressCircular, UiTabs, UiTab } from 'keen-ui';
 import Pagination from './Pagination';
 import PayloadPPS from './PayloadPPS';
 import PayloadSEI from './PayloadSEI';
+import PayloadSPS from './PayloadSPS';
 import PayloadSerialized from './PayloadSerialized';
 import TabUnit from './TabUnit';
 import UnitHeaderList from './UnitHeaderList';
@@ -73,6 +75,7 @@ export default {
     Pagination,
     PayloadPPS,
     PayloadSEI,
+    PayloadSPS,
     PayloadSerialized,
     TabUnit,
     UnitHeaderList,
@@ -150,6 +153,12 @@ export default {
         return false;
       }
       return this.selectedUnitHeader.type === NALU_TYPES.SEI;
+    },
+    isPayloadSPS() {
+      if (this.selectedUnitHeader === null) {
+        return false;
+      }
+      return this.selectedUnitHeader.type === NALU_TYPES.SPS;
     },
     isPayloadSerialized() {
       if (this.selectedUnitHeader === null) {
@@ -251,6 +260,8 @@ export default {
         payload = this.readSEI(reader, dataNoStartCode);
       } else if (unitHeader.type === NALU_TYPES.PPS) {
         payload = this.readPPS(reader, dataNoStartCode);
+      } else if (unitHeader.type === NALU_TYPES.SPS) {
+        payload = this.readSPS(reader, dataNoStartCode);
       } else {
         payload = this.readToString(reader, dataNoStartCode);
       }
@@ -331,6 +342,22 @@ export default {
       heapBytes.set(new Uint8Array(unitData32.buffer));
 
       const ret = reader.readPPS(ptr, unitData32.length);
+
+      Module._free(ptr);
+
+      return ret;
+    },
+
+    readSPS(reader, data) {
+      const unitData32 = new Int32Array(data);
+
+      const numBytes = unitData32.length * unitData32.BYTES_PER_ELEMENT;
+      const ptr = Module._malloc(numBytes);
+
+      const heapBytes = new Uint8Array(Module.HEAPU8.buffer, ptr, numBytes);
+      heapBytes.set(new Uint8Array(unitData32.buffer));
+
+      const ret = reader.readSPS(ptr, unitData32.length);
 
       Module._free(ptr);
 

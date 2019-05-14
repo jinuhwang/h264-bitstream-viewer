@@ -8,6 +8,6 @@
 
 - In h264bitstream there are different bitstream reader functions: bs_read_u1, bs_read_ue, bs_read_se, etc. Sometimes values don't match with h264bitstream, maybe because of them.
 - `intlog2` in `slice_group_id loop`
-- `have_more_data` condition
+- `have_more_data` condition and what is inside it
 - `second_chroma_qp_index_offset`: for file out.h264 the value in h264bitstream output is negative "-2", but I have positive "2"
 - RBSP trailing bits?

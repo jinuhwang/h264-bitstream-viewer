@@ -6,6 +6,8 @@
 
 #include <h264_stream.h>
 
+#include "h264bitstream-wrapper.h"
+
 // using namespace emscripten;
 using namespace std;
 
@@ -255,46 +257,6 @@ void print_nal(stringstream &ts, h264_stream_t* h, nal_t* nal)
     else if( nal->nal_unit_type == NAL_UNIT_TYPE_AUD) { print_aud(ts, h->aud); }
 }
 
-struct PayloadSEIItem {
-  int payloadType;
-  int payloadSize;
-  std::vector<uint8_t> data;
-};
-
-struct PayloadSEI {
-  int num_seis;
-  std::vector<PayloadSEIItem> seis;
-};
-
-struct PayloadPPS {
-  int pic_parameter_set_id;
-  int seq_parameter_set_id;
-  int entropy_coding_mode_flag;
-  int pic_order_present_flag;
-  int num_slice_groups_minus1;
-  int slice_group_map_type;
-  std::vector<int> run_length_minus1;
-  std::vector<int> top_left;
-  std::vector<int> bottom_right;
-  int slice_group_change_direction_flag;
-  int slice_group_change_rate_minus1;
-  int pic_size_in_map_units_minus1;
-  std::vector<int> slice_group_id;
-  int num_ref_idx_l0_active_minus1;
-  int num_ref_idx_l1_active_minus1;
-  int weighted_pred_flag;
-  int weighted_bipred_idc;
-  int pic_init_qp_minus26;
-  int pic_init_qs_minus26;
-  int chroma_qp_index_offset;
-  int deblocking_filter_control_present_flag;
-  int constrained_intra_pred_flag;
-  int redundant_pic_cnt_present_flag;
-  int transform_8x8_mode_flag;
-  int pic_scaling_matrix_present_flag;
-  int second_chroma_qp_index_offset;
-};
-
 struct Reader {
   Reader() {}
 
@@ -339,10 +301,10 @@ struct Reader {
 
     int ret = read_nal_unit(h, buf, size);
 
-    PayloadSEI payload;
-
     sei_t** seis = h->seis;
     int num_seis = h->num_seis;
+
+    PayloadSEI payload;
 
     payload.num_seis = num_seis;
 
@@ -383,9 +345,9 @@ struct Reader {
 
     int ret = read_nal_unit(h, buf, size);
 
-    PayloadPPS payload;
-
     pps_t* pps = h->pps;
+
+    PayloadPPS payload;
 
     payload.pic_parameter_set_id = pps->pic_parameter_set_id;
     payload.seq_parameter_set_id = pps->seq_parameter_set_id;
@@ -420,6 +382,105 @@ struct Reader {
 
     return payload;
   }
+
+  PayloadSPS readSPS(uintptr_t input, int size) {
+    const int32_t* data = reinterpret_cast<int32_t*>(input);
+
+    uint8_t* buf = new uint8_t[size];
+
+    for (int i = 0; i < size; i += 1) {
+      buf[i] = (uint8_t) (data[i] & 0xff);
+    }
+
+    h264_stream_t* h = h264_new();
+
+    int ret = read_nal_unit(h, buf, size);
+
+    sps_t* sps = h->sps;
+
+    PayloadSPS payload;
+
+    payload.profile_idc = sps->profile_idc;
+    payload.constraint_set0_flag = sps->constraint_set0_flag;
+    payload.constraint_set1_flag = sps->constraint_set1_flag;
+    payload.constraint_set2_flag = sps->constraint_set2_flag;
+    payload.constraint_set3_flag = sps->constraint_set3_flag;
+    payload.constraint_set4_flag = sps->constraint_set4_flag;
+    payload.constraint_set5_flag = sps->constraint_set5_flag;
+    payload.reserved_zero_2bits = sps->reserved_zero_2bits;
+    payload.level_idc = sps->level_idc;
+    payload.seq_parameter_set_id = sps->seq_parameter_set_id;
+    payload.chroma_format_idc = sps->chroma_format_idc;
+    payload.residual_colour_transform_flag = sps->residual_colour_transform_flag;
+    payload.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
+    payload.bit_depth_chroma_minus8 = sps->bit_depth_chroma_minus8;
+    payload.qpprime_y_zero_transform_bypass_flag = sps->qpprime_y_zero_transform_bypass_flag;
+    payload.seq_scaling_matrix_present_flag = sps->seq_scaling_matrix_present_flag;
+    payload.log2_max_frame_num_minus4 = sps->log2_max_frame_num_minus4;
+    payload.pic_order_cnt_type = sps->pic_order_cnt_type;
+    payload.log2_max_pic_order_cnt_lsb_minus4 = sps->log2_max_pic_order_cnt_lsb_minus4;
+    payload.delta_pic_order_always_zero_flag = sps->delta_pic_order_always_zero_flag;
+    payload.offset_for_non_ref_pic = sps->offset_for_non_ref_pic;
+    payload.offset_for_top_to_bottom_field = sps->offset_for_top_to_bottom_field;
+    payload.num_ref_frames_in_pic_order_cnt_cycle = sps->num_ref_frames_in_pic_order_cnt_cycle;
+    payload.num_ref_frames = sps->num_ref_frames;
+    payload.gaps_in_frame_num_value_allowed_flag = sps->gaps_in_frame_num_value_allowed_flag;
+    payload.pic_width_in_mbs_minus1 = sps->pic_width_in_mbs_minus1;
+    payload.pic_height_in_map_units_minus1 = sps->pic_height_in_map_units_minus1;
+    payload.frame_mbs_only_flag = sps->frame_mbs_only_flag;
+    payload.mb_adaptive_frame_field_flag = sps->mb_adaptive_frame_field_flag;
+    payload.direct_8x8_inference_flag = sps->direct_8x8_inference_flag;
+    payload.frame_cropping_flag = sps->frame_cropping_flag;
+    payload.frame_crop_left_offset = sps->frame_crop_left_offset;
+    payload.frame_crop_right_offset = sps->frame_crop_right_offset;
+    payload.frame_crop_top_offset = sps->frame_crop_top_offset;
+    payload.frame_crop_bottom_offset = sps->frame_crop_bottom_offset;
+    payload.vui_parameters_present_flag = sps->vui_parameters_present_flag;
+
+    PayloadSPSVUI vui;
+
+    vui.aspect_ratio_info_present_flag = sps->vui.aspect_ratio_info_present_flag;
+    vui.aspect_ratio_idc = sps->vui.aspect_ratio_idc;
+    vui.sar_width = sps->vui.sar_width;
+    vui.sar_height = sps->vui.sar_height;
+    vui.overscan_info_present_flag = sps->vui.overscan_info_present_flag;
+    vui.overscan_appropriate_flag = sps->vui.overscan_appropriate_flag;
+    vui.video_signal_type_present_flag = sps->vui.video_signal_type_present_flag;
+    vui.video_format = sps->vui.video_format;
+    vui.video_full_range_flag = sps->vui.video_full_range_flag;
+    vui.colour_description_present_flag = sps->vui.colour_description_present_flag;
+    vui.colour_primaries = sps->vui.colour_primaries;
+    vui.transfer_characteristics = sps->vui.transfer_characteristics;
+    vui.matrix_coefficients = sps->vui.matrix_coefficients;
+    vui.chroma_loc_info_present_flag = sps->vui.chroma_loc_info_present_flag;
+    vui.chroma_sample_loc_type_top_field = sps->vui.chroma_sample_loc_type_top_field;
+    vui.chroma_sample_loc_type_bottom_field = sps->vui.chroma_sample_loc_type_bottom_field;
+    vui.timing_info_present_flag = sps->vui.timing_info_present_flag;
+    vui.num_units_in_tick = sps->vui.num_units_in_tick;
+    vui.time_scale = sps->vui.time_scale;
+    vui.fixed_frame_rate_flag = sps->vui.fixed_frame_rate_flag;
+    vui.nal_hrd_parameters_present_flag = sps->vui.nal_hrd_parameters_present_flag;
+    vui.vcl_hrd_parameters_present_flag = sps->vui.vcl_hrd_parameters_present_flag;
+    vui.low_delay_hrd_flag = sps->vui.low_delay_hrd_flag;
+    vui.pic_struct_present_flag = sps->vui.pic_struct_present_flag;
+    vui.bitstream_restriction_flag = sps->vui.bitstream_restriction_flag;
+    vui.motion_vectors_over_pic_boundaries_flag = sps->vui.motion_vectors_over_pic_boundaries_flag;
+    vui.max_bytes_per_pic_denom = sps->vui.max_bytes_per_pic_denom;
+    vui.max_bits_per_mb_denom = sps->vui.max_bits_per_mb_denom;
+    vui.log2_max_mv_length_horizontal = sps->vui.log2_max_mv_length_horizontal;
+    vui.log2_max_mv_length_vertical = sps->vui.log2_max_mv_length_vertical;
+    vui.num_reorder_frames = sps->vui.num_reorder_frames;
+    vui.max_dec_frame_buffering = sps->vui.max_dec_frame_buffering;
+
+    payload.vui = vui;
+
+    h264_free(h);
+
+    delete [] buf;
+
+    return payload;
+  }
+
 };
 
 EMSCRIPTEN_BINDINGS(H264Bitstream) {
@@ -433,6 +494,7 @@ EMSCRIPTEN_BINDINGS(H264Bitstream) {
     .function("readToString", &Reader::readToString)
     .function("readPPS", &Reader::readPPS)
     .function("readSEI", &Reader::readSEI)
+    .function("readSPS", &Reader::readSPS)
     ;
 
   emscripten::value_object<PayloadSEI>("PayloadSEI")
@@ -445,7 +507,6 @@ EMSCRIPTEN_BINDINGS(H264Bitstream) {
     .field("payloadSize", &PayloadSEIItem::payloadSize)
     .field("data", &PayloadSEIItem::data)
     ;
-
 
   emscripten::value_object<PayloadPPS>("PayloadPPS")
     .field("pic_parameter_set_id", &PayloadPPS::pic_parameter_set_id)
@@ -474,6 +535,81 @@ EMSCRIPTEN_BINDINGS(H264Bitstream) {
     .field("transform_8x8_mode_flag", &PayloadPPS::transform_8x8_mode_flag)
     .field("pic_scaling_matrix_present_flag", &PayloadPPS::pic_scaling_matrix_present_flag)
     .field("second_chroma_qp_index_offset", &PayloadPPS::second_chroma_qp_index_offset)
+    ;
+
+  emscripten::value_object<PayloadSPSVUI>("PayloadSPSVUI")
+    .field("aspect_ratio_info_present_flag", &PayloadSPSVUI::aspect_ratio_info_present_flag)
+    .field("aspect_ratio_idc", &PayloadSPSVUI::aspect_ratio_idc)
+    .field("sar_width", &PayloadSPSVUI::sar_width)
+    .field("sar_height", &PayloadSPSVUI::sar_height)
+    .field("overscan_info_present_flag", &PayloadSPSVUI::overscan_info_present_flag)
+    .field("overscan_appropriate_flag", &PayloadSPSVUI::overscan_appropriate_flag)
+    .field("video_signal_type_present_flag", &PayloadSPSVUI::video_signal_type_present_flag)
+    .field("video_format", &PayloadSPSVUI::video_format)
+    .field("video_full_range_flag", &PayloadSPSVUI::video_full_range_flag)
+    .field("colour_description_present_flag", &PayloadSPSVUI::colour_description_present_flag)
+    .field("colour_primaries", &PayloadSPSVUI::colour_primaries)
+    .field("transfer_characteristics", &PayloadSPSVUI::transfer_characteristics)
+    .field("matrix_coefficients", &PayloadSPSVUI::matrix_coefficients)
+    .field("chroma_loc_info_present_flag", &PayloadSPSVUI::chroma_loc_info_present_flag)
+    .field("chroma_sample_loc_type_top_field", &PayloadSPSVUI::chroma_sample_loc_type_top_field)
+    .field("chroma_sample_loc_type_bottom_field", &PayloadSPSVUI::chroma_sample_loc_type_bottom_field)
+    .field("timing_info_present_flag", &PayloadSPSVUI::timing_info_present_flag)
+    .field("num_units_in_tick", &PayloadSPSVUI::num_units_in_tick)
+    .field("time_scale", &PayloadSPSVUI::time_scale)
+    .field("fixed_frame_rate_flag", &PayloadSPSVUI::fixed_frame_rate_flag)
+    .field("nal_hrd_parameters_present_flag", &PayloadSPSVUI::nal_hrd_parameters_present_flag)
+    .field("vcl_hrd_parameters_present_flag", &PayloadSPSVUI::vcl_hrd_parameters_present_flag)
+    .field("low_delay_hrd_flag", &PayloadSPSVUI::low_delay_hrd_flag)
+    .field("pic_struct_present_flag", &PayloadSPSVUI::pic_struct_present_flag)
+    .field("bitstream_restriction_flag", &PayloadSPSVUI::bitstream_restriction_flag)
+    .field("motion_vectors_over_pic_boundaries_flag", &PayloadSPSVUI::motion_vectors_over_pic_boundaries_flag)
+    .field("max_bytes_per_pic_denom", &PayloadSPSVUI::max_bytes_per_pic_denom)
+    .field("max_bits_per_mb_denom", &PayloadSPSVUI::max_bits_per_mb_denom)
+    .field("log2_max_mv_length_horizontal", &PayloadSPSVUI::log2_max_mv_length_horizontal)
+    .field("log2_max_mv_length_vertical", &PayloadSPSVUI::log2_max_mv_length_vertical)
+    .field("num_reorder_frames", &PayloadSPSVUI::num_reorder_frames)
+    .field("max_dec_frame_buffering", &PayloadSPSVUI::max_dec_frame_buffering)
+    ;
+
+  emscripten::value_object<PayloadSPS>("PayloadSPS")
+    .field("profile_idc", &PayloadSPS::profile_idc)
+    .field("constraint_set0_flag", &PayloadSPS::constraint_set0_flag)
+    .field("constraint_set1_flag", &PayloadSPS::constraint_set1_flag)
+    .field("constraint_set2_flag", &PayloadSPS::constraint_set2_flag)
+    .field("constraint_set3_flag", &PayloadSPS::constraint_set3_flag)
+    .field("constraint_set4_flag", &PayloadSPS::constraint_set4_flag)
+    .field("constraint_set5_flag", &PayloadSPS::constraint_set5_flag)
+    .field("reserved_zero_2bits", &PayloadSPS::reserved_zero_2bits)
+    .field("level_idc", &PayloadSPS::level_idc)
+    .field("seq_parameter_set_id", &PayloadSPS::seq_parameter_set_id)
+    .field("chroma_format_idc", &PayloadSPS::chroma_format_idc)
+    .field("residual_colour_transform_flag", &PayloadSPS::residual_colour_transform_flag)
+    .field("bit_depth_luma_minus8", &PayloadSPS::bit_depth_luma_minus8)
+    .field("bit_depth_chroma_minus8", &PayloadSPS::bit_depth_chroma_minus8)
+    .field("qpprime_y_zero_transform_bypass_flag", &PayloadSPS::qpprime_y_zero_transform_bypass_flag)
+    .field("seq_scaling_matrix_present_flag", &PayloadSPS::seq_scaling_matrix_present_flag)
+    .field("log2_max_frame_num_minus4", &PayloadSPS::log2_max_frame_num_minus4)
+    .field("pic_order_cnt_type", &PayloadSPS::pic_order_cnt_type)
+    .field("log2_max_pic_order_cnt_lsb_minus4", &PayloadSPS::log2_max_pic_order_cnt_lsb_minus4)
+    .field("delta_pic_order_always_zero_flag", &PayloadSPS::delta_pic_order_always_zero_flag)
+    .field("offset_for_non_ref_pic", &PayloadSPS::offset_for_non_ref_pic)
+    .field("offset_for_top_to_bottom_field", &PayloadSPS::offset_for_top_to_bottom_field)
+    .field("num_ref_frames_in_pic_order_cnt_cycle", &PayloadSPS::num_ref_frames_in_pic_order_cnt_cycle)
+    .field("num_ref_frames", &PayloadSPS::num_ref_frames)
+    .field("gaps_in_frame_num_value_allowed_flag", &PayloadSPS::gaps_in_frame_num_value_allowed_flag)
+    .field("pic_width_in_mbs_minus1", &PayloadSPS::pic_width_in_mbs_minus1)
+    .field("pic_height_in_map_units_minus1", &PayloadSPS::pic_height_in_map_units_minus1)
+    .field("frame_mbs_only_flag", &PayloadSPS::frame_mbs_only_flag)
+    .field("mb_adaptive_frame_field_flag", &PayloadSPS::mb_adaptive_frame_field_flag)
+    .field("direct_8x8_inference_flag", &PayloadSPS::direct_8x8_inference_flag)
+    .field("frame_cropping_flag", &PayloadSPS::frame_cropping_flag)
+    .field("frame_crop_left_offset", &PayloadSPS::frame_crop_left_offset)
+    .field("frame_crop_right_offset", &PayloadSPS::frame_crop_right_offset)
+    .field("frame_crop_top_offset", &PayloadSPS::frame_crop_top_offset)
+    .field("frame_crop_bottom_offset", &PayloadSPS::frame_crop_bottom_offset)
+    .field("vui_parameters_present_flag", &PayloadSPS::vui_parameters_present_flag)
+    .field("vui", &PayloadSPS::vui)
     ;
 
 }
