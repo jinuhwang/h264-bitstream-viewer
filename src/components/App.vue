@@ -27,19 +27,19 @@
         />
       </div>
       <div :class="$style.payload">
-        <UiTabs v-if="hasPayload">
+        <UiTabs v-if="hasPayload" :class="$style.tabs">
+          <UiTab title="Payload">
+            <PayloadPPS v-if="isPayloadPPS" :payload="payload" />
+            <PayloadSEI v-if="isPayloadSEI" :payload="payload" />
+            <PayloadSPS v-if="isPayloadSPS" :payload="payload" />
+            <PayloadSerialized v-if="isPayloadSerialized" :payload="payload" />
+          </UiTab>
           <UiTab title="NAL">
             <TabUnit
               :number="this.selectedNumber"
               :range="selectedRange"
               :unitHeader="selectedUnitHeader"
             />
-          </UiTab>
-          <UiTab title="Payload">
-            <PayloadPPS v-if="isPayloadPPS" :payload="payload" />
-            <PayloadSEI v-if="isPayloadSEI" :payload="payload" />
-            <PayloadSPS v-if="isPayloadSPS" :payload="payload" />
-            <PayloadSerialized v-if="isPayloadSerialized" :payload="payload" />
           </UiTab>
         </UiTabs>
       </div>
@@ -403,10 +403,25 @@ export default {
 }
 
 .payload {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 5px 20px;
+}
+
+.tabs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tabs > :global(.ui-tabs__body) {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: auto;
-  padding: 5px 20px;
 }
 
 .loading {
