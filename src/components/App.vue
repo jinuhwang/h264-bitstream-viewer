@@ -233,6 +233,7 @@ export default {
 
     handlePerPageChange(perPage) {
       this.perPage = perPage;
+      this.currentPage = 1;
       this.loadPage();
     },
 

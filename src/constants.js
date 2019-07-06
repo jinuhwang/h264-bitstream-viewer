@@ -48,3 +48,7 @@ export const SEI_PAYLOAD_TYPES = {
   STEREO_VIDEO_INFO: 21,
   SCALABILITY_INFO: 24,
 };
+
+export const SAR = {
+  EXTENDED: 255,
+};

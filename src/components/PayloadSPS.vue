@@ -84,6 +84,9 @@
         </Row>
         <template v-if="payload.seq_scaling_matrix_present_flag">
           <!-- TODO: scaling list -->
+          <Row :class="$style.warn">
+            <Cell colspan="2">TODO</Cell>
+          </Row>
         </template>
       </template>
 
@@ -120,6 +123,9 @@
           <Cell>{{ payload.num_ref_frames_in_pic_order_cnt_cycle }}</Cell>
         </Row>
         <!-- TODO: offset_for_ref_frame -->
+        <Row :class="$style.warn">
+          <Cell colspan="2">TODO</Cell>
+        </Row>
       </template>
 
       <Row>
@@ -193,8 +199,9 @@
             <Cell>vui.aspect_ratio_idc</Cell>
             <Cell>{{ payload.vui.aspect_ratio_idc }}</Cell>
           </Row>
-          <!-- TODO: 255 const sar_extended -->
-          <template v-if="payload.vui.aspect_ratio_idc === 255">
+          <template
+            v-if="payload.vui.aspect_ratio_idc === $options.SAR.EXTENDED"
+          >
             <Row>
               <Cell>vui.sar_width</Cell>
               <Cell>{{ payload.vui.sar_width }}</Cell>
@@ -290,6 +297,9 @@
         </Row>
         <template v-if="payload.vui.nal_hrd_parameters_present_flag">
           <!-- TODO: read_debug_hrd_parameters(&sps->hrd_nal, b); -->
+          <Row :class="$style.warn">
+            <Cell colspan="2">TODO</Cell>
+          </Row>
         </template>
 
         <Row>
@@ -298,6 +308,9 @@
         </Row>
         <template v-if="payload.vui.vcl_hrd_parameters_present_flag">
           <!-- TODO: read_debug_hrd_parameters(&sps->hrd_vcl, b); -->
+          <Row :class="$style.warn">
+            <Cell colspan="2">TODO</Cell>
+          </Row>
         </template>
 
         <template
@@ -349,7 +362,7 @@
             <Cell>{{ payload.vui.num_reorder_frames }}</Cell>
           </Row>
           <!-- TODO: for out.h264 sps->vui.max_dec_frame_buffering: 4 -->
-          <Row>
+          <Row :class="$style.warn">
             <Cell>vui.max_dec_frame_buffering</Cell>
             <Cell>{{ payload.vui.max_dec_frame_buffering }}</Cell>
           </Row>
@@ -362,12 +375,16 @@
 <script>
 import { Table, Row, Cell } from './Table';
 
+import { SAR } from '../constants';
+
 export default {
   components: {
     Table,
     Row,
     Cell,
   },
+
+  SAR,
 
   props: {
     payload: {
@@ -377,3 +394,9 @@ export default {
   },
 };
 </script>
+
+<style module>
+.warn {
+  background: #fbd7d4;
+}
+</style>

@@ -69,7 +69,11 @@
             <Cell>pic_size_in_map_units_minus1</Cell>
             <Cell>{{ payload.pic_size_in_map_units_minus1 }}</Cell>
           </Row>
-          <Row v-for="(_, i) in payload.pic_size_in_map_units_minus1" :key="i">
+          <Row
+            v-for="(_, i) in payload.pic_size_in_map_units_minus1"
+            :key="i"
+            :class="$style.warn"
+          >
             <!-- TODO: v = intlog2 -->
             <Cell>slice_group_id[{{ i }}]</Cell>
             <Cell>{{ payload.slice_group_id.get(i) }}</Cell>
@@ -126,7 +130,7 @@
         <Cell>{{ payload.pic_scaling_matrix_present_flag }}</Cell>
       </Row>
       <!-- TODO: for file out.h264 the value in h264bitstream output is negative "-2", but I have positive "2" -->
-      <Row>
+      <Row :class="$style.warn">
         <Cell>second_chroma_qp_index_offset</Cell>
         <Cell>{{ payload.second_chroma_qp_index_offset }}</Cell>
       </Row>
@@ -154,3 +158,9 @@ export default {
   },
 };
 </script>
+
+<style module>
+.warn {
+  background: #fbd7d4;
+}
+</style>
